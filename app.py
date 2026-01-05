@@ -11,11 +11,10 @@ from imblearn.over_sampling import SMOTE
 from sklearn.impute import SimpleImputer
 import io
 
-# ----------------------------
+
 # PAGE SETUP
-# ----------------------------
 st.set_page_config(page_title="AI Bias Auditor", layout="wide")
-st.title("🧠 AI Bias Auditor — Detect & Reduce Dataset Bias (User Input Only)")
+st.title("AI Bias Auditor — Detect & Reduce Dataset Bias (User Input Only)")
 
 st.write("""
 Upload your dataset, select a **target column** and a **sensitive feature**, and the tool will:
@@ -26,15 +25,13 @@ Upload your dataset, select a **target column** and a **sensitive feature**, and
 - Produce an unbiased dataset  
 """)
 
-# ----------------------------
+
 # HELPER
-# ----------------------------
 def safe_read_csv(uploaded_file):
     return pd.read_csv(uploaded_file)
 
-# ----------------------------
+
 # UPLOAD DATASET
-# ----------------------------
 uploaded_file = st.file_uploader("📂 Upload CSV dataset", type=["csv"])
 
 if uploaded_file:
@@ -54,9 +51,8 @@ if uploaded_file:
 
     columns = list(df.columns)
 
-    # ----------------------------
+    
     # SELECT COLUMNS
-    # ----------------------------
     target_col = st.selectbox("🎯 Target Column (label)", columns)
     sensitive_col = st.selectbox("⚖ Sensitive Column (e.g., gender, age, region)", columns)
 
@@ -64,9 +60,8 @@ if uploaded_file:
         st.error("❌ Sensitive column cannot be the same as the target column.")
         st.stop()
 
-    # ----------------------------
+    
     # RUN BIAS AUDITOR
-    # ----------------------------
     if st.button("🚀 Run Bias Auditor"):
         try:
             st.info("Processing... Please wait...")
@@ -90,9 +85,8 @@ if uploaded_file:
             y_all = pd.Series(target_cat.codes, index=working.index)
             target_mapping = dict(enumerate(target_cat.categories))
 
-            # ----------------------------
+            
             # ENCODE ALL CATEGORICAL FEATURES (EXCEPT TARGET)
-            # ----------------------------
             cat_cols = [c for c in working.columns if working[c].dtype == object and c != target_col]
 
             if len(cat_cols) > 0:
@@ -100,15 +94,13 @@ if uploaded_file:
                 working[cat_cols] = encoder.fit_transform(working[cat_cols])
                 working[cat_cols] = working[cat_cols].astype(float)
 
-            # ----------------------------
+        
             # IMPUTE MISSING VALUES
-            # ----------------------------
             imputer = SimpleImputer(strategy="median")
             working = pd.DataFrame(imputer.fit_transform(working), columns=working.columns)
 
-            # ----------------------------
+            
             # SPLIT
-            # ----------------------------
             X = working.drop(columns=[target_col])
             y = y_all
 
@@ -122,9 +114,8 @@ if uploaded_file:
 
             sensitive_test = sensitive_original.loc[X_test.index]
 
-            # ----------------------------
+        
             # MODEL BEFORE DEBIASING
-            # ----------------------------
             model = LogisticRegression(max_iter=1000)
 
             X_test = X_test.reindex(columns=X_train.columns, fill_value=0)
@@ -153,9 +144,7 @@ if uploaded_file:
             st.pyplot(fig1)
             st.metric("Demographic Parity Difference (Before)", f"{dpd_before:.3f}")
 
-            # ----------------------------
             # APPLY SMOTE
-            # ----------------------------
             if y_train.value_counts().min() >= 2:
                 sm = SMOTE(random_state=42)
                 X_train_res, y_train_res = sm.fit_resample(X_train, y_train)
@@ -173,9 +162,7 @@ if uploaded_file:
             st.metric("Accuracy (After Debiasing)", f"{accuracy_score(y_test, y_pred_after):.3f}")
             st.metric("Demographic Parity Difference (After)", f"{dpd_after:.3f}")
 
-            # ----------------------------
             # EXPORT
-            # ----------------------------
             unbiased_df = X_test.copy()
             unbiased_df[target_col + "_predicted"] = [
                 target_mapping.get(int(v), str(v)) for v in y_pred_after
@@ -199,3 +186,4 @@ if uploaded_file:
 
 else:
     st.info("👆 Upload a CSV file to start.")
+
